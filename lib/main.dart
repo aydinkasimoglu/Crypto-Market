@@ -1,10 +1,13 @@
-import 'dart:collection';
-
 import 'package:crypto_market/screens/coins_page.dart';
 import 'package:crypto_market/screens/wallet_page.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await SystemChrome.setPreferredOrientations(
+      [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+
   runApp(const App());
 }
 
@@ -33,16 +36,17 @@ class HomePage extends StatefulWidget {
 
 class _HomePageState extends State<HomePage> {
   int _selectedNavIndex = 0;
-  static final Map<String, double> _savedCurrencies = HashMap();
   static final List<Widget> _screens = <Widget>[
-    CoinsPage(savedCurrencies: _savedCurrencies,),
-    WalletPage(savedCurrencies: _savedCurrencies,)
+    const CoinsPage(),
+    const WalletPage(),
   ];
   static const List<String> _screenTitles = <String>[
     "Crypto Market",
     "My Wallet"
   ];
 
+  /// Handle the navigation bar selection.
+  /// This is called when the user taps on the navigation item.
   void onNavItemTapped(int index) {
     setState(() {
       _selectedNavIndex = index;
@@ -53,12 +57,15 @@ class _HomePageState extends State<HomePage> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
+        // Change the title based on the nav item selected.
         title: Text(_screenTitles.elementAt(_selectedNavIndex)),
       ),
+      // Change the body based on the nav item selected.
       body: _screens.elementAt(_selectedNavIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(icon: Icon(Icons.currency_bitcoin), label: 'Coins'),
+          BottomNavigationBarItem(
+              icon: Icon(Icons.currency_bitcoin), label: 'Coins'),
           BottomNavigationBarItem(icon: Icon(Icons.wallet), label: 'Wallet')
         ],
         currentIndex: _selectedNavIndex,
