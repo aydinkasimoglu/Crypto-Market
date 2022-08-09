@@ -20,6 +20,7 @@ class _WalletPageState extends State<WalletPage> {
   double sumOfCurrencies = 0.0;
   List<CryptoTransaction> savedTransactions = [];
   Map<String, List<CryptoTransaction>> groupedTransactions = {};
+  bool isExpanded = false;
 
   @override
   void initState() {
@@ -51,34 +52,55 @@ class _WalletPageState extends State<WalletPage> {
               style:
                   const TextStyle(fontSize: 40.0, fontWeight: FontWeight.bold),
             ),
-            ListView.builder(
-              itemBuilder: (context, index) {
-                return Card(
-                  child: Padding(
-                    padding: const EdgeInsets.symmetric(
-                        vertical: 10.0, horizontal: 25.0),
-                    child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                      children: <Widget>[
-                        Text(
-                          groupedTransactions.keys.elementAt(index),
-                          style: const TextStyle(
-                              fontSize: 20.0, fontWeight: FontWeight.w500),
+            Expanded(
+              child: ListView.builder(
+                itemBuilder: (context, index) {
+                  return Card(
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(
+                          vertical: 10.0, horizontal: 25.0),
+                      child: InkWell(
+                        splashColor: Colors.blue.withAlpha(30),
+                        onTap: () {
+                          setState(() {
+                            isExpanded = !isExpanded;
+                          });
+                        },
+                        child: AnimatedSize(
+                          curve: Curves.easeIn,
+                          duration: const Duration(seconds: 1),
+                          child: Column(
+                            children: [
+                              Row(
+                                mainAxisAlignment:
+                                    MainAxisAlignment.spaceBetween,
+                                children: <Widget>[
+                                  Text(
+                                    groupedTransactions.keys.elementAt(index),
+                                    style: const TextStyle(
+                                        fontSize: 20.0,
+                                        fontWeight: FontWeight.w500),
+                                  ),
+                                  Text(groupedTransactions.values
+                                      .elementAt(index)
+                                      .map((element) => element.amount)
+                                      .reduce((previousValue, currentValue) =>
+                                          previousValue + currentValue)
+                                      .toString()),
+                                ],
+                              ),
+                              isExpanded ? const Divider() : Container(),
+                            ],
+                          ),
                         ),
-                        Text(groupedTransactions.values
-                            .elementAt(index)
-                            .map((element) => element.amount)
-                            .reduce((previousValue, currentValue) =>
-                                previousValue + currentValue)
-                            .toString()),
-                      ],
+                      ),
                     ),
-                  ),
-                );
-              },
-              itemCount: groupedTransactions.length,
-              scrollDirection: Axis.vertical,
-              shrinkWrap: true,
+                  );
+                },
+                itemCount: groupedTransactions.length,
+                scrollDirection: Axis.vertical,
+                shrinkWrap: true,
+              ),
             ),
           ],
         ),
