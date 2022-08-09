@@ -2,6 +2,13 @@ import 'package:crypto_market/db/transaction_database.dart';
 import 'package:crypto_market/model/crypto_transaction.dart';
 import 'package:flutter/material.dart';
 
+extension Iterables<E> on Iterable<E> {
+  Map<K, List<E>> groupBy<K>(K Function(E) keyFunction) => fold(
+      <K, List<E>>{},
+      (Map<K, List<E>> map, E element) =>
+          map..putIfAbsent(keyFunction(element), () => <E>[]).add(element));
+}
+
 class WalletPage extends StatefulWidget {
   const WalletPage({Key? key}) : super(key: key);
 
@@ -11,17 +18,24 @@ class WalletPage extends StatefulWidget {
 
 class _WalletPageState extends State<WalletPage> {
   double sumOfCurrencies = 0.0;
-  late List<CryptoTransaction> savedCurrencies;
+  List<CryptoTransaction> savedTransactions = [];
+  Map<String, List<CryptoTransaction>> groupedTransactions = {};
 
   @override
   void initState() {
     super.initState();
-    setState(() async {
-      savedCurrencies =
-          await TransactionDatabase.instance.getTransactionsGroupedByCurrency();
-      for (var element in savedCurrencies) {
-        sumOfCurrencies += element.amount * element.price;
-      }
+    initSavedTransactions();
+  }
+
+  void initSavedTransactions() async {
+    savedTransactions = await TransactionDatabase.instance.getTransactions();
+    for (var element in savedTransactions) {
+      sumOfCurrencies += element.amount * element.price;
+    }
+
+    setState(() {
+      groupedTransactions =
+          savedTransactions.groupBy((element) => element.currency);
     });
   }
 
@@ -47,18 +61,22 @@ class _WalletPageState extends State<WalletPage> {
                       mainAxisAlignment: MainAxisAlignment.spaceBetween,
                       children: <Widget>[
                         Text(
-                          savedCurrencies.elementAt(index).currency,
+                          groupedTransactions.keys.elementAt(index),
                           style: const TextStyle(
                               fontSize: 20.0, fontWeight: FontWeight.w500),
                         ),
-                        Text(
-                            savedCurrencies.elementAt(index).amount.toString()),
+                        Text(groupedTransactions.values
+                            .elementAt(index)
+                            .map((element) => element.amount)
+                            .reduce((previousValue, currentValue) =>
+                                previousValue + currentValue)
+                            .toString()),
                       ],
                     ),
                   ),
                 );
               },
-              itemCount: savedCurrencies.length,
+              itemCount: groupedTransactions.length,
               scrollDirection: Axis.vertical,
               shrinkWrap: true,
             ),

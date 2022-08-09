@@ -21,10 +21,10 @@ class _CoinsPageState extends State<CoinsPage> {
   void initState() {
     super.initState();
     futureCryptoModel = fetchCrypto();
-    setState(() async {
-      filteredList = await futureCryptoModel;
-    });
+    initFilteredList();
   }
+
+  void initFilteredList() async => filteredList = await futureCryptoModel;
 
   /// Fetch the crypto data from the API
   Future<List<CryptoModel>> fetchCrypto() async {
