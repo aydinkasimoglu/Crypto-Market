@@ -3,14 +3,11 @@ import 'dart:convert';
 import 'package:crypto_market/screens/coin_details_page.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../model/crypto_model.dart';
 
 class CoinsPage extends StatefulWidget {
-  const CoinsPage({Key? key, required this.savedCurrencies}) : super(key: key);
-
-  final Map<String, double> savedCurrencies;
+  const CoinsPage({Key? key}) : super(key: key);
 
   @override
   State<CoinsPage> createState() => _CoinsPageState();
@@ -19,21 +16,20 @@ class CoinsPage extends StatefulWidget {
 class _CoinsPageState extends State<CoinsPage> {
   late Future<List<CryptoModel>> futureCryptoModel;
   List<CryptoModel> filteredList = [];
-  late Map<String, double> savedCurrencies;
 
   @override
   void initState() {
     super.initState();
     futureCryptoModel = fetchCrypto();
-    savedCurrencies = widget.savedCurrencies;
-    handler();
-    loadSavedCurrencies();
+    setState(() async {
+      filteredList = await futureCryptoModel;
+    });
   }
 
-  void handler() async => filteredList = await futureCryptoModel;
-
+  /// Fetch the crypto data from the API
   Future<List<CryptoModel>> fetchCrypto() async {
-    final response = await http.get(Uri.parse('https://raw.githubusercontent.com/atilsamancioglu/K21-JSONDataSet/master/crypto.json'));
+    final response = await http.get(Uri.parse(
+        'https://raw.githubusercontent.com/atilsamancioglu/K21-JSONDataSet/master/crypto.json'));
     final List json = jsonDecode(response.body);
 
     if (response.statusCode == 200) {
@@ -43,22 +39,17 @@ class _CoinsPageState extends State<CoinsPage> {
     }
   }
 
-  Future<void> loadSavedCurrencies() async {
-    final prefs = await SharedPreferences.getInstance();
-
-    final hashMapString = prefs.getString('currencies') ?? '{}';
-    setState(() {
-      savedCurrencies = Map<String, double>.from(jsonDecode(hashMapString));
-    });
-  }
-
+  /// Filter the list of crypto models by the given search query.
   void runFilter(String filter) async {
     List<CryptoModel> results = [];
 
     if (filter.isEmpty) {
       results = await futureCryptoModel;
     } else {
-      results = (await futureCryptoModel).where((element) => element.currency.toLowerCase().startsWith(filter.toLowerCase())).toList();
+      results = (await futureCryptoModel)
+          .where((element) =>
+              element.currency.toLowerCase().startsWith(filter.toLowerCase()))
+          .toList();
     }
 
     setState(() {
@@ -72,16 +63,13 @@ class _CoinsPageState extends State<CoinsPage> {
       padding: const EdgeInsets.all(10.0),
       child: Column(
         children: <Widget>[
-          // Text field to filter the list view by the name
-          // of crypto currencies
+          // Text field to filter the list view by the name of crypto currencies
           Container(
             margin: const EdgeInsets.only(bottom: 15.0),
             child: TextField(
               onChanged: (value) => runFilter(value),
               decoration: const InputDecoration(
-                  border: OutlineInputBorder(),
-                  labelText: 'Filter'
-              ),
+                  border: OutlineInputBorder(), labelText: 'Filter'),
             ),
           ),
           // The list of crypto currencies
@@ -91,40 +79,54 @@ class _CoinsPageState extends State<CoinsPage> {
             builder: (context, snapshot) {
               if (snapshot.hasData) {
                 return Expanded(
-                    child: filteredList.isNotEmpty ? ListView.separated(
-                      itemBuilder: (context, index) {
-                        final crypto = filteredList[index];
+                  child: filteredList.isNotEmpty
+                      ? ListView.separated(
+                          itemBuilder: (context, index) {
+                            final crypto = filteredList[index];
 
-                        return Card(
-                          elevation: 1.5,
-                          child: InkWell(
-                            splashColor: Colors.blue.withAlpha(30),
-                            onTap: () {
-                              Navigator.push(context, MaterialPageRoute(builder: (context) =>
-                                  CoinDetailsPage(currency: crypto.currency, price: crypto.price, savedCurrencies: savedCurrencies,)
-                              ));
-                            },
-                            child: Padding(
-                              padding: const EdgeInsets.all(10.0),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
-                                children: <Widget>[
-                                  Text(crypto.currency, style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),),
-                                  Text("${crypto.price}\$", style: const TextStyle(fontSize: 15.0),),
-                                ],
+                            return Card(
+                              elevation: 1.5,
+                              child: InkWell(
+                                splashColor: Colors.blue.withAlpha(30),
+                                onTap: () {
+                                  Navigator.push(
+                                      context,
+                                      MaterialPageRoute(
+                                          builder: (context) => CoinDetailsPage(
+                                              currency: crypto.currency,
+                                              price: crypto.price)));
+                                },
+                                child: Padding(
+                                  padding: const EdgeInsets.all(10.0),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: <Widget>[
+                                      Text(
+                                        crypto.currency,
+                                        style: const TextStyle(
+                                            fontSize: 18.0,
+                                            fontWeight: FontWeight.bold),
+                                      ),
+                                      Text(
+                                        "${crypto.price}\$",
+                                        style: const TextStyle(fontSize: 15.0),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        );
-                      },
-                      separatorBuilder: (context, index) => const SizedBox(height: 5.0),
-                      itemCount: filteredList.length,
-                      scrollDirection: Axis.vertical,
-                      shrinkWrap: true,
-                    ) : const Text("No result"),
+                            );
+                          },
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(height: 5.0),
+                          itemCount: filteredList.length,
+                          scrollDirection: Axis.vertical,
+                          shrinkWrap: true,
+                        )
+                      : const Text("No result"),
                 );
-              }
-              else if (snapshot.hasError) {
+              } else if (snapshot.hasError) {
                 return Text("${snapshot.error}");
               }
 

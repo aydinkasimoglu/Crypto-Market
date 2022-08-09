@@ -1,20 +1,15 @@
-import 'dart:convert';
-
+import 'package:crypto_market/db/transaction_database.dart';
+import 'package:crypto_market/model/crypto_transaction.dart';
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 import '../components/custom_text_field.dart';
-import '../model/crypto_model.dart';
 
 class CoinDetailsPage extends StatefulWidget {
-  const CoinDetailsPage({Key? key,
-    required this.currency,
-    required this.price,
-    required this.savedCurrencies}) : super(key: key);
+  const CoinDetailsPage({Key? key, required this.currency, required this.price})
+      : super(key: key);
 
   final String currency;
   final String price;
-  final Map<String, double> savedCurrencies;
 
   @override
   State<CoinDetailsPage> createState() => _CoinDetailsPageState();
@@ -41,8 +36,7 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
 
   void onCoinAmountChanged(String value) {
     try {
-
-      if (value == '') {
+      if (value.isEmpty) {
         setState(() {
           isAddToWalletButtonDisabled = true;
         });
@@ -67,7 +61,7 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
 
   void onDollarAmountChanged(String value) {
     try {
-      if (value == '') {
+      if (value.isEmpty) {
         setState(() {
           isAddToWalletButtonDisabled = true;
         });
@@ -95,20 +89,17 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
     ScaffoldMessenger.of(context).showSnackBar(snackBar);
   }
 
+  /// Create a transaction and add it to the database.
+  /// Then display a snackbar with a success message.
   Future<void> onAddToWalletClicked() async {
-    final prefs = await SharedPreferences.getInstance();
-    setState(() {
-      final crypto = CryptoModel(currency: widget.currency, price: widget.price);
+    final crypto = await TransactionDatabase.instance.create(CryptoTransaction(
+        currency: widget.currency,
+        price: double.parse(widget.price),
+        amount: double.parse(_coinController.text),
+        date: DateTime.now(),
+        type: TransactionType.buy));
 
-      if (widget.savedCurrencies[jsonEncode(crypto.toJson())] != null) {
-        widget.savedCurrencies[jsonEncode(crypto.toJson())] = widget.savedCurrencies[jsonEncode(crypto.toJson())]! + double.parse(_coinController.text);
-      } else {
-        widget.savedCurrencies[jsonEncode(crypto.toJson())] = double.parse(_coinController.text);
-      }
-       prefs.setString('currencies', jsonEncode(widget.savedCurrencies));
-    });
-
-    displaySnackBar('Successful');
+    displaySnackBar('${crypto.amount} ${crypto.currency} added to wallet');
   }
 
   @override
@@ -123,9 +114,16 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
           crossAxisAlignment: CrossAxisAlignment.center,
           children: <Widget>[
             // Big bold header that displays coin's name
-            Text(widget.currency, style: const TextStyle(fontSize: 45.0, fontWeight: FontWeight.w900),),
+            Text(
+              widget.currency,
+              style:
+                  const TextStyle(fontSize: 45.0, fontWeight: FontWeight.w900),
+            ),
             // Smaller text displays coin's price
-            Text("${widget.price}\$", style: const TextStyle(fontSize: 25.0),),
+            Text(
+              "${widget.price}\$",
+              style: const TextStyle(fontSize: 25.0),
+            ),
             Container(
               margin: const EdgeInsets.only(top: 15.0, bottom: 15.0),
               child: Row(
@@ -138,13 +136,20 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
                     child: CustomTextField(
                       controller: _coinController,
                       onChanged: onCoinAmountChanged,
-                      prefixIcon: const Icon(Icons.currency_bitcoin, color: Colors.yellow,),
+                      prefixIcon: const Icon(
+                        Icons.currency_bitcoin,
+                        color: Colors.yellow,
+                      ),
                       borderText: 'Coin',
                     ),
                   ),
                   Container(
                     margin: const EdgeInsets.only(left: 5.0, right: 5.0),
-                    child: const Text("=", style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold),),
+                    child: const Text(
+                      "=",
+                      style:
+                          TextStyle(fontSize: 16, fontWeight: FontWeight.bold),
+                    ),
                   ),
                   // Input field that has value of coin in dollars
                   SizedBox(
@@ -152,14 +157,20 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
                     child: CustomTextField(
                       controller: _dollarController,
                       onChanged: onDollarAmountChanged,
-                      prefixIcon: const Icon(Icons.attach_money, color: Colors.green,),
+                      prefixIcon: const Icon(
+                        Icons.attach_money,
+                        color: Colors.green,
+                      ),
                       borderText: 'Dollar',
                     ),
                   ),
                 ],
               ),
             ),
-            ElevatedButton(onPressed: isAddToWalletButtonDisabled ? null : onAddToWalletClicked, child: const Text("ADD TO WALLET"))
+            ElevatedButton(
+                onPressed:
+                    isAddToWalletButtonDisabled ? null : onAddToWalletClicked,
+                child: const Text("ADD TO WALLET"))
           ],
         ),
       ),
