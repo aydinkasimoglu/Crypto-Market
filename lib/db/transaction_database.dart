@@ -65,17 +65,6 @@ class TransactionDatabase {
     return result.map((json) => CryptoTransaction.fromJson(json)).toList();
   }
 
-  /// Group all transactions by currency and return as a Map of currency to List of CryptoTransaction objects.
-  Future<List<CryptoTransaction>> getTransactionsGroupedByCurrency() async {
-    final db = await instance.database;
-    final result = await db.rawQuery('''
-      SELECT ${CryptoTransactionFields.currency}, SUM(${CryptoTransactionFields.amount}) 
-      FROM $tableCryptoTransaction 
-      GROUP BY ${CryptoTransactionFields.currency}
-    ''');
-    return result.map((json) => CryptoTransaction.fromJson(json)).toList();
-  }
-
   /// Delete a transaction by id from the database. Returns the number of rows deleted.
   Future<int> delete(int id) async {
     final db = await instance.database;
