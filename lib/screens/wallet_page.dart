@@ -4,10 +4,8 @@ import 'package:crypto_market/model/crypto_transaction.dart';
 import 'package:flutter/material.dart';
 
 extension Iterables<E> on Iterable<E> {
-  Map<K, List<E>> groupBy<K>(K Function(E) keyFunction) => fold(
-      <K, List<E>>{},
-      (Map<K, List<E>> map, E element) =>
-          map..putIfAbsent(keyFunction(element), () => <E>[]).add(element));
+  Map<K, List<E>> groupBy<K>(K Function(E) keyFunction) => fold(<K, List<E>>{},
+      (Map<K, List<E>> map, E element) => map..putIfAbsent(keyFunction(element), () => <E>[]).add(element));
 }
 
 class WalletPage extends StatefulWidget {
@@ -31,12 +29,12 @@ class _WalletPageState extends State<WalletPage> {
   void initSavedTransactions() async {
     savedTransactions = await TransactionDatabase.instance.getTransactions();
     for (var element in savedTransactions) {
-      sumOfCurrencies += element.amount * element.price;
+      sumOfCurrencies +=
+          element.type == TransactionType.buy ? element.amount * element.price : -element.amount * element.price;
     }
 
     setState(() {
-      groupedTransactions =
-          savedTransactions.groupBy((element) => element.currency);
+      groupedTransactions = savedTransactions.groupBy((element) => element.currency);
     });
   }
 
@@ -48,10 +46,10 @@ class _WalletPageState extends State<WalletPage> {
         child: Column(
           children: <Widget>[
             Text(
-              "${sumOfCurrencies.toStringAsFixed(3)}\$",
-              style:
-                  const TextStyle(fontSize: 40.0, fontWeight: FontWeight.bold),
+              "Total value of coins: ${sumOfCurrencies.toStringAsFixed(3)}\$",
+              style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.bold),
             ),
+            const SizedBox(height: 20.0),
             Expanded(
               child: ListView.builder(
                 itemBuilder: (context, index) {
