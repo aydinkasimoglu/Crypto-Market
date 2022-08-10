@@ -59,10 +59,7 @@ class CryptoTransaction {
       price: json[CryptoTransactionFields.price],
       amount: json[CryptoTransactionFields.amount],
       date: DateTime.parse(json[CryptoTransactionFields.date]),
-      type: TransactionType.values.firstWhere(
-        (type) => type.toString() == json[CryptoTransactionFields.type],
-        orElse: () => TransactionType.buy,
-      ),
+      type: json[CryptoTransactionFields.type] == '0' ? TransactionType.buy : TransactionType.sell,
       id: json[CryptoTransactionFields.id],
     );
   }
