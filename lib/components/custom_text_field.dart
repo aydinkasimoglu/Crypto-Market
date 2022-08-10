@@ -3,11 +3,7 @@ import 'package:flutter/services.dart';
 
 class CustomTextField extends StatefulWidget {
   const CustomTextField(
-      {Key? key,
-      required this.controller,
-      required this.prefixIcon,
-      required this.borderText,
-      required this.onChanged})
+      {Key? key, required this.controller, required this.prefixIcon, required this.borderText, required this.onChanged})
       : super(key: key);
 
   final TextEditingController controller;
@@ -46,8 +42,7 @@ class _CustomTextFieldState extends State<CustomTextField> {
 
 class CustomTextInputFormatter extends TextInputFormatter {
   @override
-  TextEditingValue formatEditUpdate(
-      TextEditingValue oldValue, TextEditingValue newValue) {
+  TextEditingValue formatEditUpdate(TextEditingValue oldValue, TextEditingValue newValue) {
     if (oldValue.text.isEmpty && newValue.text == '.') {
       newValue = const TextEditingValue(
         text: '0.',
@@ -55,8 +50,7 @@ class CustomTextInputFormatter extends TextInputFormatter {
       );
     }
 
-    if (newValue.text.contains('.') &&
-        newValue.text.substring(newValue.text.indexOf('.')).length > 4) {
+    if (newValue.text.contains('.') && newValue.text.substring(newValue.text.indexOf('.')).length > 4) {
       newValue = oldValue;
     }
 
