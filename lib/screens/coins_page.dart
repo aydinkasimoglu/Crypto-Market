@@ -28,8 +28,8 @@ class _CoinsPageState extends State<CoinsPage> {
 
   /// Fetch the crypto data from the API
   Future<List<CryptoModel>> fetchCrypto() async {
-    final response = await http.get(Uri.parse(
-        'https://raw.githubusercontent.com/atilsamancioglu/K21-JSONDataSet/master/crypto.json'));
+    final response = await http
+        .get(Uri.parse('https://raw.githubusercontent.com/atilsamancioglu/K21-JSONDataSet/master/crypto.json'));
     final List json = jsonDecode(response.body);
 
     if (response.statusCode == 200) {
@@ -47,8 +47,7 @@ class _CoinsPageState extends State<CoinsPage> {
       results = await futureCryptoModel;
     } else {
       results = (await futureCryptoModel)
-          .where((element) =>
-              element.currency.toLowerCase().startsWith(filter.toLowerCase()))
+          .where((element) => element.currency.toLowerCase().startsWith(filter.toLowerCase()))
           .toList();
     }
 
@@ -68,8 +67,7 @@ class _CoinsPageState extends State<CoinsPage> {
             margin: const EdgeInsets.only(bottom: 15.0),
             child: TextField(
               onChanged: (value) => runFilter(value),
-              decoration: const InputDecoration(
-                  border: OutlineInputBorder(), labelText: 'Filter'),
+              decoration: const InputDecoration(border: OutlineInputBorder(), labelText: 'Filter'),
             ),
           ),
           // The list of crypto currencies
@@ -92,21 +90,17 @@ class _CoinsPageState extends State<CoinsPage> {
                                   Navigator.push(
                                       context,
                                       MaterialPageRoute(
-                                          builder: (context) => CoinDetailsPage(
-                                              currency: crypto.currency,
-                                              price: crypto.price)));
+                                          builder: (context) =>
+                                              CoinDetailsPage(currency: crypto.currency, price: crypto.price)));
                                 },
                                 child: Padding(
                                   padding: const EdgeInsets.all(10.0),
                                   child: Column(
-                                    crossAxisAlignment:
-                                        CrossAxisAlignment.start,
+                                    crossAxisAlignment: CrossAxisAlignment.start,
                                     children: <Widget>[
                                       Text(
                                         crypto.currency,
-                                        style: const TextStyle(
-                                            fontSize: 18.0,
-                                            fontWeight: FontWeight.bold),
+                                        style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                                       ),
                                       Text(
                                         "${crypto.price}\$",
@@ -118,8 +112,7 @@ class _CoinsPageState extends State<CoinsPage> {
                               ),
                             );
                           },
-                          separatorBuilder: (context, index) =>
-                              const SizedBox(height: 5.0),
+                          separatorBuilder: (context, index) => const SizedBox(height: 5.0),
                           itemCount: filteredList.length,
                           scrollDirection: Axis.vertical,
                           shrinkWrap: true,

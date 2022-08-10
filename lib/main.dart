@@ -5,8 +5,7 @@ import 'package:flutter/services.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await SystemChrome.setPreferredOrientations(
-      [DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
+  await SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.portraitDown]);
 
   runApp(const App());
 }
@@ -40,10 +39,7 @@ class _HomePageState extends State<HomePage> {
     const CoinsPage(),
     const WalletPage(),
   ];
-  static const List<String> _screenTitles = <String>[
-    "Crypto Market",
-    "My Wallet"
-  ];
+  static const List<String> _screenTitles = <String>["Crypto Market", "My Wallet"];
 
   /// Handle the navigation bar selection.
   /// This is called when the user taps on the navigation item.
@@ -64,8 +60,7 @@ class _HomePageState extends State<HomePage> {
       body: _screens.elementAt(_selectedNavIndex),
       bottomNavigationBar: BottomNavigationBar(
         items: const <BottomNavigationBarItem>[
-          BottomNavigationBarItem(
-              icon: Icon(Icons.currency_bitcoin), label: 'Coins'),
+          BottomNavigationBarItem(icon: Icon(Icons.currency_bitcoin), label: 'Coins'),
           BottomNavigationBarItem(icon: Icon(Icons.wallet), label: 'Wallet')
         ],
         currentIndex: _selectedNavIndex,
