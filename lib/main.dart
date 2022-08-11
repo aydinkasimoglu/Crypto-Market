@@ -1,7 +1,10 @@
 import 'package:crypto_market/screens/coins_page.dart';
 import 'package:crypto_market/screens/wallet_page.dart';
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
+
+import 'db/transaction_database.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -49,12 +52,30 @@ class _HomePageState extends State<HomePage> {
     });
   }
 
+  /// Get all the transactions from the database.
+  /// Iterate over them and delete them by their id.
+  void deleteAllTransactions() async {
+    final transactions = await TransactionDatabase.instance.getTransactions();
+    for (var transaction in transactions) {
+      await TransactionDatabase.instance.delete(transaction.id!);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         // Change the title based on the nav item selected.
         title: Text(_screenTitles.elementAt(_selectedNavIndex)),
+        actions: _selectedNavIndex == 1
+            ? [
+                IconButton(
+                  icon: const Icon(CupertinoIcons.trash),
+                  onPressed: deleteAllTransactions,
+                  tooltip: 'Delete all transactions',
+                ),
+              ]
+            : null,
       ),
       // Change the body based on the nav item selected.
       body: _screens.elementAt(_selectedNavIndex),
