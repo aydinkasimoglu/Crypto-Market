@@ -29,7 +29,7 @@ class FavoritesDatabase {
     await db.execute('''
       CREATE TABLE IF NOT EXISTS $tableFavoriteCurrency(
         ${FavoriteCurrencyFields.id} INTEGER PRIMARY KEY AUTOINCREMENT,
-        ${FavoriteCurrencyFields.currency} TEXT NOT NULL,
+        ${FavoriteCurrencyFields.currency} TEXT NOT NULL
       )
     ''');
   }
