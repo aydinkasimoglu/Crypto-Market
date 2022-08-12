@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:crypto_market/db/favorites_database.dart';
 import 'package:crypto_market/model/favorite_currency.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_svg/flutter_svg.dart';
@@ -9,9 +8,10 @@ import '../model/crypto_model.dart';
 import '../screens/coin_details_page.dart';
 
 class CryptoCard extends StatefulWidget {
-  const CryptoCard({Key? key, required this.crypto}) : super(key: key);
+  const CryptoCard({Key? key, required this.crypto, required this.favOnPressed}) : super(key: key);
 
   final CryptoModel crypto;
+  final void Function() favOnPressed;
 
   @override
   State<CryptoCard> createState() => _CryptoCardState();
@@ -19,6 +19,7 @@ class CryptoCard extends StatefulWidget {
 
 class _CryptoCardState extends State<CryptoCard> {
   late bool isBlurAppeared;
+  late Future<List<FavoriteCurrency>> futureFavoriteCurrencies;
 
   @override
   void initState() {
@@ -26,23 +27,6 @@ class _CryptoCardState extends State<CryptoCard> {
     setState(() {
       isBlurAppeared = false;
     });
-  }
-
-  void displaySnackBar(String text) {
-    final snackBar = SnackBar(content: Text(text));
-    ScaffoldMessenger.of(context).showSnackBar(snackBar);
-  }
-
-  void addToFavorites() async {
-    final crypto = await FavoritesDatabase.instance.create(FavoriteCurrency(
-      currency: widget.crypto.currency,
-    ));
-
-    setState(() {
-      isBlurAppeared = false;
-    });
-
-    displaySnackBar("${crypto.currency} added to favorites");
   }
 
   @override
@@ -76,11 +60,11 @@ class _CryptoCardState extends State<CryptoCard> {
                   style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
-                  "${widget.crypto.price}\$",
+                  "${double.parse(widget.crypto.price).toStringAsFixed(4)}\$",
                   style: const TextStyle(fontSize: 15.0),
                 ),
                 trailing: Text(
-                  "${widget.crypto.priceChangePct}%",
+                  "${(double.parse(widget.crypto.priceChangePct) * 100).toStringAsFixed(3)}%",
                   style: TextStyle(
                       fontSize: 15.0, color: widget.crypto.priceChangePct.startsWith('-') ? Colors.red : Colors.green),
                 ),
@@ -116,7 +100,12 @@ class _CryptoCardState extends State<CryptoCard> {
                           children: <Widget>[
                             // Adds the currency to the favorites list when pressed.
                             ElevatedButton.icon(
-                                onPressed: addToFavorites,
+                                onPressed: () {
+                                  widget.favOnPressed();
+                                  setState(() {
+                                    isBlurAppeared = false;
+                                  });
+                                },
                                 style: ButtonStyle(
                                   shape: MaterialStateProperty.all(
                                     RoundedRectangleBorder(
