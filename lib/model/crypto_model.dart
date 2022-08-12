@@ -1,3 +1,5 @@
+import 'dart:convert';
+
 class CryptoModel {
   final String currency;
   final String price;
@@ -7,11 +9,19 @@ class CryptoModel {
   const CryptoModel({required this.currency, required this.price, required this.logoUrl, required this.priceChangePct});
 
   factory CryptoModel.fromJson(Map<String, dynamic> json) {
-    return CryptoModel(
-        currency: json['currency'],
-        price: json['price'],
-        logoUrl: json['logo_url'],
-        priceChangePct: json['1d']['price_change_pct']);
+    final oneDay = jsonEncode(json['1d']);
+    if (jsonDecode(oneDay) != null) {
+      Map<String, dynamic> oneDayMap = jsonDecode(oneDay);
+
+      return CryptoModel(
+          currency: json['currency'],
+          price: json['price'],
+          logoUrl: json['logo_url'],
+          priceChangePct: oneDayMap['price_change_pct']);
+    } else {
+      return CryptoModel(
+          currency: json['currency'], price: json['price'], logoUrl: json['logo_url'], priceChangePct: 'NaN');
+    }
   }
 
   Map<String, dynamic> toJson() => {
