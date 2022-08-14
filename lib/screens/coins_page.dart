@@ -18,18 +18,46 @@ class CoinsPage extends StatefulWidget {
 }
 
 class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMixin {
-  late Future<List<CryptoModel>> futureCryptoModel = fetchCrypto();
-  late Future<List<FavoriteCurrency>> futureFavoriteCurrencies = fetchFavCurrency();
-  List<CryptoModel> filteredList = [];
-  List<CryptoModel> liveData = [];
   late TabController _tabController;
+  List<CryptoModel> filteredList = [];
+
+  final StreamController<List<CryptoModel>> _cryptoModelController = StreamController<List<CryptoModel>>.broadcast();
+  final StreamController<List<FavoriteCurrency>> _favCurrencyController = StreamController<List<FavoriteCurrency>>.broadcast();
+  Stream<List<CryptoModel>> _cryptoModelStream = const Stream<List<CryptoModel>>.empty();
+  Stream<List<FavoriteCurrency>> _favCurrencyStream = const Stream<List<FavoriteCurrency>>.empty();
+  List<CryptoModel> cryptoModelStreamData = [];
+  List<FavoriteCurrency> favCryptoStreamData = [];
 
   @override
   void initState() {
     super.initState();
     _tabController = TabController(length: 4, vsync: this);
-    init();
+
+    _cryptoModelStream = _cryptoModelController.stream;
+    _favCurrencyStream = _favCurrencyController.stream;
+
+    _cryptoModelStream.listen((data) {
+      setState(() {
+        cryptoModelStreamData = data;
+      });
+    });
+
+    _favCurrencyStream.listen((data) {
+      setState(() {
+        favCryptoStreamData = data;
+      });
+    });
+
+    Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
+      final res = await fetchCrypto();
+      _cryptoModelController.add(res);
+      fetchFavCurrency();
+    });
+
+    initFilteredList();
   }
+
+  void initFilteredList() async => filteredList = await fetchCrypto();
 
   @override
   void dispose() {
@@ -37,18 +65,6 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
     _tabController.dispose();
   }
 
-  void init() async {
-    filteredList = await futureCryptoModel;
-    liveData = await futureCryptoModel;
-    Timer.periodic(const Duration(seconds: 3), (timer) {
-      setState(() {
-        futureCryptoModel = fetchCrypto();
-        futureFavoriteCurrencies = fetchFavCurrency();
-      });
-    });
-  }
-
-  /// Fetch the crypto data from the API
   Future<List<CryptoModel>> fetchCrypto() async {
     debugPrint("fetchCrypto() called");
     final response = await http.get(Uri.parse(
@@ -62,21 +78,20 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
     }
   }
 
-  Future<List<FavoriteCurrency>> fetchFavCurrency() async {
+  void fetchFavCurrency() async {
     debugPrint("fetchFavCurrency() called");
-    return await FavoritesDatabase.instance.getCurrencies();
+    _favCurrencyController.add(await FavoritesDatabase.instance.getCurrencies());
   }
 
   /// Filter the list of crypto models by the given search query.
-  void runFilter(String filter) async {
+  void runFilter(String filter) {
     List<CryptoModel> results = [];
 
     if (filter.isEmpty) {
-      results = await futureCryptoModel;
+      results = cryptoModelStreamData;
     } else {
-      results = (await futureCryptoModel)
-          .where((element) => element.currency.toLowerCase().startsWith(filter.toLowerCase()))
-          .toList();
+      results =
+          cryptoModelStreamData.where((element) => element.currency.toLowerCase().startsWith(filter.toLowerCase())).toList();
     }
 
     setState(() {
@@ -147,41 +162,39 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
                     ),
                     // The list of crypto currencies
                     // Filled with the data came from web service
-                    FutureBuilder<List<CryptoModel>>(
-                      future: futureCryptoModel,
-                      builder: (context, snapshot) {
+                    StreamBuilder<List<CryptoModel>>(
+                      stream: _cryptoModelStream,
+                      builder: (BuildContext context, AsyncSnapshot<List<CryptoModel>> snapshot) {
                         if (snapshot.hasData) {
                           return Expanded(
                             child: filteredList.isNotEmpty
                                 ? ListView.separated(
-                                    itemBuilder: (context, index) {
-                                      final crypto = filteredList[index];
-
+                                    itemBuilder: (BuildContext context, int index) {
+                                      /// Check if the crypto currency is in the list of favorites.
+                                      /// If it is, mension that it is already in favorites. Otherwise, add currency to favorites.
                                       void addToFavorites() async {
                                         final favCurrencies = await FavoritesDatabase.instance.getCurrencies();
                                         for (var element in favCurrencies) {
-                                          if (element.currency == crypto.currency) {
+                                          if (element.currency == filteredList[index].currency) {
                                             displaySnackBar('Already in favorites');
                                             return;
                                           }
                                         }
                                         final fav = await FavoritesDatabase.instance.create(FavoriteCurrency(
-                                          currency: crypto.currency,
+                                          currency: filteredList[index].currency,
                                         ));
 
-                                        setState(() {
-                                          futureFavoriteCurrencies = fetchFavCurrency();
-                                        });
+                                        fetchFavCurrency();
 
                                         displaySnackBar("${fav.currency} added to favorites");
                                       }
 
                                       return CryptoCard(
-                                        crypto: crypto,
+                                        crypto: filteredList[index],
                                         favOnPressed: addToFavorites,
                                       );
                                     },
-                                    separatorBuilder: (context, index) => const SizedBox(height: 5.0),
+                                    separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 5.0),
                                     itemCount: filteredList.length,
                                     scrollDirection: Axis.vertical,
                                     shrinkWrap: true,
@@ -197,20 +210,22 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
                     ),
                   ],
                 ),
-                FutureBuilder(
-                  future: futureFavoriteCurrencies,
-                  builder: (context, snapshot) {
+                StreamBuilder<List<FavoriteCurrency>>(
+                  stream: _favCurrencyStream,
+                  builder: (BuildContext context, AsyncSnapshot<List<FavoriteCurrency>> snapshot) {
                     if (snapshot.hasData) {
                       return ListView.separated(
-                        itemBuilder: (context, index) {
+                        itemBuilder: (BuildContext context, int index) {
                           final favCrypto = (snapshot.data as List<FavoriteCurrency>)[index];
+                          debugPrint("CryptoStreamData: $cryptoModelStreamData");
 
                           final favCryptoPrice =
-                              liveData.firstWhere((element) => element.currency == favCrypto.currency).price;
-                          final favCryptoChange =
-                              liveData.firstWhere((element) => element.currency == favCrypto.currency).priceChangePct;
+                              cryptoModelStreamData.firstWhere((element) => element.currency == favCrypto.currency).price;
+                          final favCryptoChange = cryptoModelStreamData
+                              .firstWhere((element) => element.currency == favCrypto.currency)
+                              .priceChangePct;
                           final favCryptoLogo =
-                              liveData.firstWhere((element) => element.currency == favCrypto.currency).logoUrl;
+                              cryptoModelStreamData.firstWhere((element) => element.currency == favCrypto.currency).logoUrl;
 
                           return Card(
                             child: Row(
@@ -228,8 +243,7 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
                                     trailing: Text(
                                       "${(double.parse(favCryptoChange) * 100).toStringAsFixed(3)}%",
                                       style: TextStyle(
-                                          fontSize: 15.0,
-                                          color: favCryptoChange.startsWith('-') ? Colors.red : Colors.green),
+                                          fontSize: 15.0, color: favCryptoChange.startsWith('-') ? Colors.red : Colors.green),
                                     ),
                                     leading: favCryptoLogo.endsWith('svg')
                                         ? SvgPicture.network(
@@ -247,9 +261,7 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
                                 ElevatedButton(
                                   onPressed: () {
                                     FavoritesDatabase.instance.delete(favCrypto.id!);
-                                    setState(() {
-                                      futureFavoriteCurrencies = fetchFavCurrency();
-                                    });
+                                    fetchFavCurrency();
                                   },
                                   style: ButtonStyle(
                                     shape: MaterialStateProperty.all(const CircleBorder()),
@@ -264,7 +276,7 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
                             ),
                           );
                         },
-                        separatorBuilder: (context, index) => const SizedBox(height: 5.0),
+                        separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 5.0),
                         itemCount: (snapshot.data as List<FavoriteCurrency>).length,
                         scrollDirection: Axis.vertical,
                         shrinkWrap: true,
