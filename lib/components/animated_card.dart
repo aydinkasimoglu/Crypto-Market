@@ -1,11 +1,13 @@
+import 'package:crypto_market/model/crypto_model.dart';
 import 'package:crypto_market/model/crypto_transaction.dart';
 import 'package:flutter/material.dart';
 
 class AnimatedCard extends StatefulWidget {
-  const AnimatedCard({Key? key, required this.map, required this.index}) : super(key: key);
+  const AnimatedCard({Key? key, required this.transactionMap, required this.index, required this.liveData}) : super(key: key);
 
-  final Map<String, List<CryptoTransaction>> map;
+  final Map<String, List<CryptoTransaction>> transactionMap;
   final int index;
+  final List<CryptoModel> liveData;
 
   @override
   State<AnimatedCard> createState() => _AnimatedCardState();
@@ -20,7 +22,7 @@ class _AnimatedCardState extends State<AnimatedCard> {
     super.initState();
     isExpanded = false;
     setState(() {
-      coinAmount = widget.map.values
+      coinAmount = widget.transactionMap.values
           .elementAt(widget.index)
           .map((e) => e.type == TransactionType.buy ? e.amount : -e.amount)
           .reduce((a, b) => a + b);
@@ -48,9 +50,22 @@ class _AnimatedCardState extends State<AnimatedCard> {
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: <Widget>[
-                          Text(
-                            widget.map.keys.elementAt(widget.index),
-                            style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.w500),
+                          Row(
+                            children: <Widget>[
+                              Image.network(
+                                widget.liveData
+                                    .firstWhere(
+                                        (element) => element.currency == widget.transactionMap.keys.elementAt(widget.index))
+                                    .logoUrl,
+                                height: 28.0,
+                                width: 28.0,
+                              ),
+                              const SizedBox(width: 5.0),
+                              Text(
+                                widget.transactionMap.keys.elementAt(widget.index).toUpperCase(),
+                                style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.w500),
+                              ),
+                            ],
                           ),
                           Text(coinAmount.toString()),
                         ],
@@ -65,28 +80,33 @@ class _AnimatedCardState extends State<AnimatedCard> {
                                     // Using reversed order because we want to show the latest transactions first
 
                                     final buyOrSell =
-                                        widget.map.values.elementAt(widget.index).reversed.elementAt(i).type ==
+                                        widget.transactionMap.values.elementAt(widget.index).reversed.elementAt(i).type ==
                                                 TransactionType.buy
                                             ? '+'
                                             : '-';
-                                    final date = widget.map.values.elementAt(widget.index).reversed.elementAt(i).date;
+                                    final date = widget.transactionMap.values.elementAt(widget.index).reversed.elementAt(i).date;
 
                                     return ListTile(
                                       title: Text(
-                                        widget.map.values.elementAt(widget.index).reversed.elementAt(i).currency,
+                                        widget.transactionMap.values
+                                            .elementAt(widget.index)
+                                            .reversed
+                                            .elementAt(i)
+                                            .currency
+                                            .toUpperCase(),
                                         style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.w500),
                                       ),
                                       subtitle: Text(
-                                        "${date.month}/${date.day}/${date.year} ${date.hour}:${date.minute}:${date.second}\n${widget.map.values.elementAt(widget.index).reversed.elementAt(i).price}\$",
+                                        "${date.month}/${date.day}/${date.year} ${date.hour}:${date.minute}:${date.second}\n${widget.transactionMap.values.elementAt(widget.index).reversed.elementAt(i).price}\$",
                                         style: const TextStyle(fontSize: 15.0, fontWeight: FontWeight.w500),
                                       ),
                                       trailing: Text(
-                                        "$buyOrSell${widget.map.values.elementAt(widget.index).reversed.elementAt(i).amount}",
+                                        "$buyOrSell${widget.transactionMap.values.elementAt(widget.index).reversed.elementAt(i).amount}",
                                         style: const TextStyle(fontSize: 20.0, fontWeight: FontWeight.w500),
                                       ),
                                     );
                                   },
-                                  itemCount: widget.map.values.elementAt(widget.index).reversed.length,
+                                  itemCount: widget.transactionMap.values.elementAt(widget.index).reversed.length,
                                   physics: const NeverScrollableScrollPhysics(),
                                   shrinkWrap: true,
                                 ),
