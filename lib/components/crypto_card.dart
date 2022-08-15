@@ -1,17 +1,18 @@
+import 'dart:async';
 import 'dart:ui';
 
 import 'package:crypto_market/model/favorite_currency.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../model/crypto_model.dart';
 import '../screens/coin_details_page.dart';
 
 class CryptoCard extends StatefulWidget {
-  const CryptoCard({Key? key, required this.crypto, required this.favOnPressed}) : super(key: key);
+  const CryptoCard({Key? key, required this.cryptoName, required this.favOnPressed, required this.data}) : super(key: key);
 
-  final CryptoModel crypto;
+  final String cryptoName;
   final void Function() favOnPressed;
+  final List<CryptoModel> data;
 
   @override
   State<CryptoCard> createState() => _CryptoCardState();
@@ -20,6 +21,7 @@ class CryptoCard extends StatefulWidget {
 class _CryptoCardState extends State<CryptoCard> {
   late bool isBlurAppeared;
   late Future<List<FavoriteCurrency>> futureFavoriteCurrencies;
+  CryptoModel get crypto => widget.data.firstWhere((element) => element.currency == widget.cryptoName);
 
   @override
   void initState() {
@@ -43,8 +45,8 @@ class _CryptoCardState extends State<CryptoCard> {
                   : Navigator.push(
                       context,
                       MaterialPageRoute(
-                          builder: (context) => CoinDetailsPage(
-                                crypto: widget.crypto,
+                          builder: (BuildContext context) => CoinDetailsPage(
+                                crypto: crypto,
                               )));
             },
             onLongPress: () {
@@ -56,29 +58,22 @@ class _CryptoCardState extends State<CryptoCard> {
               padding: const EdgeInsets.all(10.0),
               child: ListTile(
                 title: Text(
-                  widget.crypto.currency,
+                  crypto.currency.toUpperCase(),
                   style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                 ),
                 subtitle: Text(
-                  "${double.parse(widget.crypto.price).toStringAsFixed(4)}\$",
+                  "${double.parse(crypto.price).toStringAsFixed(6)}\$",
                   style: const TextStyle(fontSize: 15.0),
                 ),
                 trailing: Text(
-                  "${(double.parse(widget.crypto.priceChangePct) * 100).toStringAsFixed(3)}%",
-                  style: TextStyle(
-                      fontSize: 15.0, color: widget.crypto.priceChangePct.startsWith('-') ? Colors.red : Colors.green),
+                  "${double.parse(crypto.priceChangePct).toStringAsFixed(3)}%",
+                  style: TextStyle(fontSize: 15.0, color: crypto.priceChangePct.startsWith('-') ? Colors.red : Colors.green),
                 ),
-                leading: widget.crypto.logoUrl.endsWith('svg')
-                    ? SvgPicture.network(
-                        widget.crypto.logoUrl,
-                        height: 40.0,
-                        width: 40.0,
-                      )
-                    : Image.network(
-                        widget.crypto.logoUrl,
-                        height: 40.0,
-                        width: 40.0,
-                      ),
+                leading: Image.network(
+                  crypto.logoUrl,
+                  height: 40.0,
+                  width: 40.0,
+                ),
               ),
             ),
           ),
@@ -87,9 +82,7 @@ class _CryptoCardState extends State<CryptoCard> {
           child: Center(
             child: ClipRect(
               child: BackdropFilter(
-                filter: isBlurAppeared
-                    ? ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5)
-                    : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
+                filter: isBlurAppeared ? ImageFilter.blur(sigmaX: 2.5, sigmaY: 2.5) : ImageFilter.blur(sigmaX: 0, sigmaY: 0),
                 child: isBlurAppeared
                     ? Container(
                         alignment: Alignment.center,
