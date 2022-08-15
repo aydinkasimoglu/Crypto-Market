@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:convert';
 
 import 'package:crypto_market/components/animated_card.dart';
@@ -26,12 +27,15 @@ class _WalletPageState extends State<WalletPage> {
   Map<String, List<CryptoTransaction>> groupedTransactions = {};
   List<CryptoModel> liveCryptoData = [];
   late bool isDataLoaded;
+  Timer? timer;
 
   @override
   void initState() {
     super.initState();
-    initSavedTransactions();
     isDataLoaded = false;
+    timer = Timer.periodic(const Duration(seconds: 5), (Timer timer) {
+      initSavedTransactions();
+    });
   }
 
   void initSavedTransactions() async {
@@ -40,13 +44,14 @@ class _WalletPageState extends State<WalletPage> {
 
     setState(() {
       for (var element in savedTransactions) {
-        liveCryptoData
+        sumOfCurrencies = liveCryptoData
             .map((e) => e.currency == element.currency
-                ? sumOfCurrencies += element.type == TransactionType.buy
+                ? element.type == TransactionType.buy
                     ? double.parse(e.price) * element.amount
                     : double.parse(e.price) * element.amount * -1
                 : null)
-            .toList();
+            .reduce((previousValue, currentValue) =>
+                !(previousValue == null || currentValue == null) ? previousValue + currentValue : 0)!;
       }
       groupedTransactions = savedTransactions.groupBy((element) => element.currency);
       isDataLoaded = true;
@@ -55,7 +60,7 @@ class _WalletPageState extends State<WalletPage> {
 
   Future<List<CryptoModel>> fetchCrypto() async {
     final response = await http.get(Uri.parse(
-        'https://api.nomics.com/v1/currencies/ticker?key=b6352825d16d34d26e59f897facc320a11bcd630&interval=1d&status=active&per-page=100&page=1'));
+        'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h'));
     final List json = jsonDecode(response.body);
 
     if (response.statusCode == 200) {
@@ -82,7 +87,11 @@ class _WalletPageState extends State<WalletPage> {
                     child: ListView.builder(
                       itemBuilder: (context, index) {
                         // My custom card for special use
-                        return AnimatedCard(map: groupedTransactions, index: index);
+                        return AnimatedCard(
+                          transactionMap: groupedTransactions,
+                          index: index,
+                          liveData: liveCryptoData,
+                        );
                       },
                       itemCount: groupedTransactions.length,
                       scrollDirection: Axis.vertical,
