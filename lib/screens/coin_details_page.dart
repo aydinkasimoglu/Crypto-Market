@@ -2,13 +2,12 @@ import 'package:crypto_market/db/transaction_database.dart';
 import 'package:crypto_market/model/crypto_model.dart';
 import 'package:crypto_market/model/crypto_transaction.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 
 import '../components/custom_text_field.dart';
 
 extension Iterables<E> on Iterable<E> {
-  Map<K, List<E>> groupBy<K>(K Function(E) keyFunction) => fold(<K, List<E>>{},
-      (Map<K, List<E>> map, E element) => map..putIfAbsent(keyFunction(element), () => <E>[]).add(element));
+  Map<K, List<E>> groupBy<K>(K Function(E) keyFunction) =>
+      fold(<K, List<E>>{}, (Map<K, List<E>> map, E element) => map..putIfAbsent(keyFunction(element), () => <E>[]).add(element));
 }
 
 class CoinDetailsPage extends StatefulWidget {
@@ -21,8 +20,8 @@ class CoinDetailsPage extends StatefulWidget {
 }
 
 class _CoinDetailsPageState extends State<CoinDetailsPage> {
-  late TextEditingController _coinController;
-  late TextEditingController _dollarController;
+  final TextEditingController _coinController = TextEditingController();
+  final TextEditingController _dollarController = TextEditingController();
   double coinAmount = 0.0;
   bool isBuyingState = true;
   bool isButtonDisabled = true;
@@ -30,16 +29,7 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
   @override
   void initState() {
     super.initState();
-    _coinController = TextEditingController();
-    _dollarController = TextEditingController();
     loadTransactions();
-  }
-
-  @override
-  void dispose() {
-    super.dispose();
-    _coinController.dispose();
-    _dollarController.dispose();
   }
 
   void loadTransactions() async {
@@ -126,14 +116,14 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
       coinAmount += crypto.amount;
     });
 
-    displaySnackBar('${crypto.amount} ${crypto.currency} added to wallet');
+    displaySnackBar('${crypto.amount} ${crypto.currency.toUpperCase()} added to wallet');
   }
 
   /// Create a selling transaction and add it to the database.
   /// Then display a snackbar with a success message.
   void onSellClicked() async {
     if (double.parse(_coinController.text) > coinAmount) {
-      displaySnackBar('You do not have enough ${widget.crypto.currency} to sell this amount.');
+      displaySnackBar('You do not have enough ${widget.crypto.currency.toUpperCase()} to sell this amount.');
       return;
     } else {
       final crypto = await TransactionDatabase.instance.create(CryptoTransaction(
@@ -147,7 +137,7 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
         coinAmount -= crypto.amount;
       });
 
-      displaySnackBar('${crypto.amount} ${crypto.currency} sold');
+      displaySnackBar('${crypto.amount} ${crypto.currency.toUpperCase()} sold');
     }
   }
 
@@ -169,20 +159,14 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: <Widget>[
                   SwitchListTile(
-                    title: Text(widget.crypto.currency,
+                    title: Text(widget.crypto.currency.toUpperCase(),
                         style: const TextStyle(fontSize: 40.0, fontWeight: FontWeight.w900)),
                     subtitle: Text("${widget.crypto.price}\$", style: const TextStyle(fontSize: 20.0)),
-                    secondary: widget.crypto.logoUrl.endsWith('svg')
-                        ? SvgPicture.network(
-                            widget.crypto.logoUrl,
-                            height: 40.0,
-                            width: 40.0,
-                          )
-                        : Image.network(
-                            widget.crypto.logoUrl,
-                            height: 40.0,
-                            width: 40.0,
-                          ),
+                    secondary: Image.network(
+                      widget.crypto.logoUrl,
+                      height: 40.0,
+                      width: 40.0,
+                    ),
                     value: isBuyingState,
                     onChanged: ((value) {
                       setState(() => isBuyingState = value);
@@ -246,7 +230,7 @@ class _CoinDetailsPageState extends State<CoinDetailsPage> {
                     ),
                     child: Text(isBuyingState ? "BUY" : "SELL"),
                   ),
-                  Text("You have ${coinAmount.toString()} ${widget.crypto.currency}"),
+                  Text("You have ${coinAmount.toString()} ${widget.crypto.currency.toUpperCase()}"),
                 ],
               ),
             ),
