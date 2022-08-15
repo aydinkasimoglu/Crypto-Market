@@ -4,7 +4,6 @@ import 'dart:convert';
 import 'package:crypto_market/components/crypto_card.dart';
 import 'package:crypto_market/model/favorite_currency.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_svg/flutter_svg.dart';
 import 'package:http/http.dart' as http;
 
 import '../db/favorites_database.dart';
@@ -28,6 +27,8 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
   List<CryptoModel> cryptoModelStreamData = [];
   List<FavoriteCurrency> favCryptoStreamData = [];
 
+  Timer? timer;
+
   @override
   void initState() {
     super.initState();
@@ -48,7 +49,7 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
       });
     });
 
-    Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
+    timer = Timer.periodic(const Duration(seconds: 5), (Timer timer) async {
       final res = await fetchCrypto();
       _cryptoModelController.add(res);
       fetchFavCurrency();
@@ -62,19 +63,24 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
   @override
   void dispose() {
     super.dispose();
+    timer?.cancel();
     _tabController.dispose();
   }
 
   Future<List<CryptoModel>> fetchCrypto() async {
-    debugPrint("fetchCrypto() called");
-    final response = await http.get(Uri.parse(
-        'https://api.nomics.com/v1/currencies/ticker?key=b6352825d16d34d26e59f897facc320a11bcd630&interval=1d&status=active&page=1'));
-    final List json = jsonDecode(response.body);
+    try {
+      debugPrint("fetchCrypto() called");
+      final response = await http.get(Uri.parse(
+          'https://api.coingecko.com/api/v3/coins/markets?vs_currency=usd&order=market_cap_desc&per_page=100&page=1&sparkline=false&price_change_percentage=24h'));
+      final List json = jsonDecode(response.body);
 
-    if (response.statusCode == 200) {
-      return json.map((e) => CryptoModel.fromJson(e)).toList();
-    } else {
-      throw Exception('Failed to load crypto model');
+      if (response.statusCode == 200) {
+        return json.map((e) => CryptoModel.fromJson(e)).toList();
+      } else {
+        throw Exception('Failed to load Crypto data');
+      }
+    } on Exception catch (_, e) {
+      throw Exception(e);
     }
   }
 
@@ -186,12 +192,13 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
 
                                         fetchFavCurrency();
 
-                                        displaySnackBar("${fav.currency} added to favorites");
+                                        displaySnackBar("${fav.currency.toUpperCase()} added to favorites");
                                       }
 
                                       return CryptoCard(
-                                        crypto: filteredList[index],
+                                        cryptoName: filteredList[index].currency,
                                         favOnPressed: addToFavorites,
+                                        data: cryptoModelStreamData,
                                       );
                                     },
                                     separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 5.0),
@@ -216,8 +223,7 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
                     if (snapshot.hasData) {
                       return ListView.separated(
                         itemBuilder: (BuildContext context, int index) {
-                          final favCrypto = (snapshot.data as List<FavoriteCurrency>)[index];
-                          debugPrint("CryptoStreamData: $cryptoModelStreamData");
+                          final favCrypto = snapshot.data![index];
 
                           final favCryptoPrice =
                               cryptoModelStreamData.firstWhere((element) => element.currency == favCrypto.currency).price;
@@ -233,29 +239,23 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
                                 Expanded(
                                   child: ListTile(
                                     title: Text(
-                                      favCrypto.currency,
+                                      favCrypto.currency.toUpperCase(),
                                       style: const TextStyle(fontSize: 18.0, fontWeight: FontWeight.bold),
                                     ),
                                     subtitle: Text(
-                                      "${double.parse(favCryptoPrice).toStringAsFixed(4)}\$",
+                                      "${double.parse(favCryptoPrice).toStringAsFixed(6)}\$",
                                       style: const TextStyle(fontSize: 15.0),
                                     ),
                                     trailing: Text(
-                                      "${(double.parse(favCryptoChange) * 100).toStringAsFixed(3)}%",
+                                      "${double.parse(favCryptoChange).toStringAsFixed(3)}%",
                                       style: TextStyle(
                                           fontSize: 15.0, color: favCryptoChange.startsWith('-') ? Colors.red : Colors.green),
                                     ),
-                                    leading: favCryptoLogo.endsWith('svg')
-                                        ? SvgPicture.network(
-                                            favCryptoLogo,
-                                            height: 40.0,
-                                            width: 40.0,
-                                          )
-                                        : Image.network(
-                                            favCryptoLogo,
-                                            height: 40.0,
-                                            width: 40.0,
-                                          ),
+                                    leading: Image.network(
+                                      favCryptoLogo,
+                                      height: 40.0,
+                                      width: 40.0,
+                                    ),
                                   ),
                                 ),
                                 ElevatedButton(
@@ -277,7 +277,7 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
                           );
                         },
                         separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 5.0),
-                        itemCount: (snapshot.data as List<FavoriteCurrency>).length,
+                        itemCount: snapshot.data!.length,
                         scrollDirection: Axis.vertical,
                         shrinkWrap: true,
                       );
@@ -285,15 +285,109 @@ class _CoinsPageState extends State<CoinsPage> with SingleTickerProviderStateMix
                       return Text("${snapshot.error}");
                     }
 
-                    return const CircularProgressIndicator();
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
                   },
                 ),
-                const Center(
-                  child: Text("Top Gainers"),
+                StreamBuilder<List<CryptoModel>>(
+                  stream: _cryptoModelStream,
+                  builder: (BuildContext context, AsyncSnapshot<List<CryptoModel>> snapshot) {
+                    if (snapshot.hasData) {
+                      return ListView.separated(
+                        itemBuilder: (BuildContext context, int index) {
+                          // Sort the snapshot data by price change percentage in descending order
+                          snapshot.data!.sort(
+                              (a, b) => (double.parse(b.priceChangePct) * 100).compareTo(double.parse(a.priceChangePct) * 100));
+
+                          final crypto = snapshot.data![index];
+
+                          /// Check if the crypto currency is in the list of favorites.
+                          /// If it is, mension that it is already in favorites. Otherwise, add currency to favorites.
+                          void addToFavorites() async {
+                            final favCurrencies = await FavoritesDatabase.instance.getCurrencies();
+                            for (var element in favCurrencies) {
+                              if (element.currency == filteredList[index].currency) {
+                                displaySnackBar('Already in favorites');
+                                return;
+                              }
+                            }
+                            final fav = await FavoritesDatabase.instance.create(FavoriteCurrency(
+                              currency: filteredList[index].currency,
+                            ));
+
+                            fetchFavCurrency();
+
+                            displaySnackBar("${fav.currency} added to favorites");
+                          }
+
+                          return CryptoCard(
+                            cryptoName: crypto.currency,
+                            favOnPressed: addToFavorites,
+                            data: cryptoModelStreamData,
+                          );
+                        },
+                        separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 5.0),
+                        itemCount: snapshot.data!.length,
+                      );
+                    } else if (snapshot.hasError) {
+                      return Text("${snapshot.error}");
+                    }
+
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
                 ),
-                const Center(
-                  child: Text("Top Losers"),
-                )
+                StreamBuilder<List<CryptoModel>>(
+                  stream: _cryptoModelStream,
+                  builder: (BuildContext context, AsyncSnapshot<List<CryptoModel>> snapshot) {
+                    if (snapshot.hasData) {
+                      return ListView.separated(
+                        itemBuilder: (BuildContext context, int index) {
+                          // Sort the snapshot data by price change percentage in ascending order
+                          snapshot.data!.sort(
+                              (a, b) => (double.parse(a.priceChangePct) * 100).compareTo(double.parse(b.priceChangePct) * 100));
+
+                          final crypto = snapshot.data![index];
+
+                          /// Check if the crypto currency is in the list of favorites.
+                          /// If it is, mension that it is already in favorites. Otherwise, add currency to favorites.
+                          void addToFavorites() async {
+                            final favCurrencies = await FavoritesDatabase.instance.getCurrencies();
+                            for (var element in favCurrencies) {
+                              if (element.currency == filteredList[index].currency) {
+                                displaySnackBar('Already in favorites');
+                                return;
+                              }
+                            }
+                            final fav = await FavoritesDatabase.instance.create(FavoriteCurrency(
+                              currency: filteredList[index].currency,
+                            ));
+
+                            fetchFavCurrency();
+
+                            displaySnackBar("${fav.currency} added to favorites");
+                          }
+
+                          return CryptoCard(
+                            cryptoName: crypto.currency,
+                            favOnPressed: addToFavorites,
+                            data: cryptoModelStreamData,
+                          );
+                        },
+                        separatorBuilder: (BuildContext context, int index) => const SizedBox(height: 5.0),
+                        itemCount: snapshot.data!.length,
+                      );
+                    } else if (snapshot.hasError) {
+                      return Text("${snapshot.error}");
+                    }
+
+                    return const Center(
+                      child: CircularProgressIndicator(),
+                    );
+                  },
+                ),
               ],
             ),
           ),
