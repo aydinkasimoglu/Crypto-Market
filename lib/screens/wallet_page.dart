@@ -50,9 +50,10 @@ class _WalletPageState extends State<WalletPage> {
 
     setState(() {
       groupedTransactions = savedTransactions.groupBy((element) => element.currency);
+      sumOfCurrencies = 0;
 
       for (var list in groupedTransactions.values) {
-        sumOfCurrencies = list
+        sumOfCurrencies += list
             .map((element) => element.type == TransactionType.buy
                 ? double.parse(liveCryptoData.firstWhere((e) => e.currency == element.currency).price) * element.amount
                 : double.parse(liveCryptoData.firstWhere((e) => e.currency == element.currency).price) * element.amount * -1)
