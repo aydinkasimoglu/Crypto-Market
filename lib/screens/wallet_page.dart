@@ -38,22 +38,27 @@ class _WalletPageState extends State<WalletPage> {
     });
   }
 
+  @override
+  void dispose() {
+    super.dispose();
+    timer?.cancel();
+  }
+
   void initSavedTransactions() async {
     savedTransactions = await TransactionDatabase.instance.getTransactions();
     liveCryptoData = await fetchCrypto();
 
     setState(() {
-      for (var element in savedTransactions) {
-        sumOfCurrencies = liveCryptoData
-            .map((e) => e.currency == element.currency
-                ? element.type == TransactionType.buy
-                    ? double.parse(e.price) * element.amount
-                    : double.parse(e.price) * element.amount * -1
-                : null)
-            .reduce((previousValue, currentValue) =>
-                !(previousValue == null || currentValue == null) ? previousValue + currentValue : 0)!;
-      }
       groupedTransactions = savedTransactions.groupBy((element) => element.currency);
+
+      for (var list in groupedTransactions.values) {
+        sumOfCurrencies = list
+            .map((element) => element.type == TransactionType.buy
+                ? double.parse(liveCryptoData.firstWhere((e) => e.currency == element.currency).price) * element.amount
+                : double.parse(liveCryptoData.firstWhere((e) => e.currency == element.currency).price) * element.amount * -1)
+            .reduce((previousValue, currentValue) => previousValue + currentValue);
+      }
+
       isDataLoaded = true;
     });
   }
