@@ -40,14 +40,14 @@ class _CryptoCardState extends State<CryptoCard> {
           child: InkWell(
             splashColor: Colors.blue.withAlpha(30),
             onTap: () {
-              isBlurAppeared
-                  ? null
-                  : Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                          builder: (BuildContext context) => CoinDetailsPage(
-                                crypto: crypto,
-                              )));
+              if (!isBlurAppeared) {
+                Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                        builder: (BuildContext context) => CoinDetailsPage(
+                              crypto: crypto,
+                            )));
+              }
             },
             onLongPress: () {
               setState(() {
